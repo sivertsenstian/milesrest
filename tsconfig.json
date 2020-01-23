@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+	      "esModuleInterop": false, 
+	      "allowSyntheticDefaultImports": true,
+	      "strict": true,
+	      "baseUrl": ".",
+	      "typeRoots": ["node_modules/@types"]  
+    },
+    "include": ["/.server.ts", "db.ts"] 
+}
