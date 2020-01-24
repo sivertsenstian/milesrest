@@ -43,7 +43,8 @@ router.get('/', async (req, res) => {
         "/sensors": "lists available sensors",
         "/boxes/:boxId": "details about given box",
         "/boxes/:boxId/sensors": "lists available sensors for given box",
-        "/boxes/:boxId/sensors/:sensor": "lists measurements for sensor for given box",
+        "/boxes/:boxId/sensors/:sensor": "lists measurements for sensor of given box",
+        "/boxes/:boxId/sensors/:sensor/add/:measurement": "Adds measurement to the given box, for given sensor",
     });   
 });
 
