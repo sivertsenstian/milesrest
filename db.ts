@@ -15,6 +15,10 @@ export const init = () => {
     const users = [{
         name: "Stian",
         boxId: 1000
+    },
+                   {
+        name: "Mads",
+        boxId: 2000
     }],
     sensors = [{
         name: "Temperature",

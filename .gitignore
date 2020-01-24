@@ -111,3 +111,5 @@ temp/
 
 *.sqlite
 *.zip
+
+_secret.json
