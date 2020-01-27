@@ -96,6 +96,10 @@ router.get('/boxes/:boxId/sensors', async (req, res) => {
     res.json(data);   
 });
 
+router.get('/health', async (_req, res) => {
+    res.sendStatus(200); 
+});
+
 // REGISTER OUR ROUTES -------------------------------
 // all of our routes will be prefixed with /api
 app.use('/api', router);
