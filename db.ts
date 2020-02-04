@@ -44,7 +44,7 @@ export const init = () => {
 export const add = async (boxId: number, sensor: number, value: number) => {
     let db = connect(),
     sql = "INSERT OR IGNORE INTO measurements(boxId, sensorId, value, timestamp) VALUES (?, ?, ?, ?)",
-    params = [boxId, sensor, value, new Date()];
+    params = [boxId, sensor, value, Date.now()];
 
     const result = await new Promise((resolve, reject) => {
         db.run(sql, params, function(this: any, err: any){
@@ -69,6 +69,22 @@ export const all = async (boxId : number, sensor: number) => {
                 reject(err);
             }
             resolve(rows);
+        });
+    });
+    db.close();
+    return result;
+}
+
+export const latest = async (boxId : number, sensor: number) => {
+    let db = connect(),
+    sql = "SELECT timestamp as t, value as v FROM measurements WHERE boxId = ? AND sensorId = ? ORDER BY timestamp desc LIMIT 1",
+    params = [boxId, sensor];
+    const result = await new Promise((resolve, reject) => {
+        db.all(sql, params, (err: any, rows: any[]) => {
+            if (err) {
+                reject(err);
+            }
+            resolve(rows[0]);
         });
     });
     db.close();

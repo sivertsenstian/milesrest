@@ -65,12 +65,23 @@ router.get('/boxes/:boxId/sensors/:sensor', async (req, res) => {
     });   
 });
 
+router.get('/boxes/:boxId/sensors/:sensor/latest', async (req, res) => {
+    const {boxId, sensor} = req.params,
+    data = await db.latest(Number(boxId), Number(sensor)); 
+
+    res.json({
+        boxId: Number(boxId),
+        sensor: Number(sensor),
+        data
+    });   
+});
+
 router.get('/boxes/:boxId/sensors/:sensor/add/:value', async (req, res, next) => {
     const {boxId, sensor, value} = req.params,
     {authorization} = req.headers;
 
     try {
-        if (authorization !== SECRETS[boxId]) {
+        if (process.env.NODE_ENV === "development" && authorization !== SECRETS[boxId]) {
             throw new Error("UnauthorizedError");
         }
 
