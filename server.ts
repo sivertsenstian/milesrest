@@ -56,7 +56,8 @@ router.get('/sensors', async (req, res) => {
 
 router.get('/boxes/:boxId/sensors/:sensor', async (req, res) => {
     const {boxId, sensor} = req.params,
-    data = await db.all(Number(boxId), Number(sensor));
+    {values, limit} = req.query,
+    data = await db.all(Number(boxId), Number(sensor), Number(values ?? 100), Number(limit ?? 1000)); 
 
     res.json({
         boxId: Number(boxId),

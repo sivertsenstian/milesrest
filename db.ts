@@ -61,16 +61,16 @@ export const add = async (boxId: number, sensor: number, value: number) => {
     return result;
 }
 
-export const all = async (boxId : number, sensor: number) => {
+export const all = async (boxId : number, sensor: number, values: number, limit: number) => {
     let db = connect(),
-    sql = "SELECT timestamp as x, value as y FROM measurements WHERE boxId = ? AND sensorId = ? ORDER BY timestamp desc LIMIT 10000",
-    params = [boxId, sensor];
+    sql = "SELECT timestamp as x, value as y FROM measurements WHERE boxId = ? AND sensorId = ? ORDER BY timestamp desc LIMIT ?",
+    params = [boxId, sensor, limit];
     const result = await new Promise((resolve, reject) => {
         db.all(sql, params, (err: any, rows: any[]) => {
             if (err) {
                 reject(err);
             }
-            const downSampledData  = LTOB(rows, 200);
+            const downSampledData  = LTOB(rows, values);
             resolve(downSampledData);
         });
     });
