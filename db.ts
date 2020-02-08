@@ -1,3 +1,5 @@
+import { LTD, LTOB, LTTB } from "downsample";
+import { XYDataPoint } from "downsample/dist/types";
 const sqlite3 = require('sqlite3').verbose();
 
 // INIT
@@ -61,14 +63,15 @@ export const add = async (boxId: number, sensor: number, value: number) => {
 
 export const all = async (boxId : number, sensor: number) => {
     let db = connect(),
-    sql = "SELECT timestamp as t, value as v FROM measurements WHERE boxId = ? AND sensorId = ? ORDER BY timestamp desc LIMIT 100",
+    sql = "SELECT timestamp as x, value as y FROM measurements WHERE boxId = ? AND sensorId = ? ORDER BY timestamp desc LIMIT 10000",
     params = [boxId, sensor];
     const result = await new Promise((resolve, reject) => {
         db.all(sql, params, (err: any, rows: any[]) => {
             if (err) {
                 reject(err);
             }
-            resolve(rows);
+            const downSampledData  = LTOB(rows, 200);
+            resolve(downSampledData);
         });
     });
     db.close();
@@ -77,7 +80,7 @@ export const all = async (boxId : number, sensor: number) => {
 
 export const latest = async (boxId : number, sensor: number) => {
     let db = connect(),
-    sql = "SELECT timestamp as t, value as v FROM measurements WHERE boxId = ? AND sensorId = ? ORDER BY timestamp desc LIMIT 1",
+    sql = "SELECT timestamp as x, value as y FROM measurements WHERE boxId = ? AND sensorId = ? ORDER BY timestamp desc LIMIT 1",
     params = [boxId, sensor];
     const result = await new Promise((resolve, reject) => {
         db.all(sql, params, (err: any, rows: any[]) => {
