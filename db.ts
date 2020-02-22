@@ -1,125 +1,238 @@
-import { LTD, LTOB, LTTB } from "downsample";
-import { XYDataPoint } from "downsample/dist/types";
-const sqlite3 = require('sqlite3').verbose();
+import { LTOB } from "downsample";
+const sqlite3 = require("sqlite3").verbose();
+import * as security from "./security";
+
+const DEBUG = true;
 
 // INIT
 const name = "./db.sqlite";
 const connect = () => new sqlite3.Database(name);
+const db = connect();
+
+// HELPERS
+const run = (
+  db: any,
+  sql: string,
+  params: any[] = []
+): Promise<{ id: number }> => {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(this: any, err: any) {
+      if (err) {
+        console.log("Error running sql " + sql);
+        console.log(err);
+        reject(err);
+      } else {
+        if (DEBUG) {
+          console.log("RUN WITH params");
+          console.log(params);
+        }
+
+        resolve({ id: this.lastID });
+      }
+    });
+  });
+};
+
+const get = (db: any, sql: string, params: any[] = []): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err: any, result: any) => {
+      if (err) {
+        console.log("Error running sql: " + sql);
+        console.log(err);
+        reject(err);
+      } else {
+        if (DEBUG) {
+          console.log("GET WITH params");
+          console.log(params);
+          console.log(result);
+        }
+
+        resolve(result);
+      }
+    });
+  });
+};
+
+const all = (db: any, sql: string, params: any[] = []): Promise<any[]> => {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err: any, rows: any[]) => {
+      if (err) {
+        console.log("Error running sql: " + sql);
+        console.log(err);
+        reject(err);
+      } else {
+        console.log("ALL WITH params");
+        console.log(params);
+        console.log(rows.length);
+
+        resolve(rows);
+      }
+    });
+  });
+};
 
 export const init = () => {
-    // CREATE TABLE
-    let     db = connect();
-    db.serialize(function() {
-        db.run("CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT, boxId INTEGER, name TEXT NOT NULL, UNIQUE(boxId, name))");
-        db.run("CREATE TABLE IF NOT EXISTS sensors(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, unit TEXT NOT NULL)");
-        db.run("CREATE TABLE IF NOT EXISTS measurements(id INTEGER PRIMARY KEY AUTOINCREMENT, boxId INT NOT NULL, value NUM, sensorId INT NOT NULL, timestamp TEXT NOT NULL, UNIQUE(boxId, sensorId, timestamp))");
-    });
-    const users = [{
-        name: "Stian",
-        boxId: 1000
-    },
-                   {
-        name: "Mads",
-        boxId: 2000
-    }],
-    sensors = [{
+  // CREATE TABLES
+  db.serialize(async function() {
+    db.run(
+      `CREATE TABLE IF NOT EXISTS 
+       users(id INTEGER PRIMARY KEY AUTOINCREMENT, 
+             name TEXT NOT NULL UNIQUE,
+             api_key TEXT NOT NULL UNIQUE,
+             is_admin BOOLEAN DEFAULT 0)`
+    );
+
+    db.run(
+      `CREATE TABLE IF NOT EXISTS 
+       boxes(id INTEGER PRIMARY KEY AUTOINCREMENT, 
+             userId INTEGER, 
+             description TEXT NOT NULL UNIQUE)`
+    );
+
+    db.run(
+      `CREATE TABLE IF NOT EXISTS 
+       sensors(id INTEGER PRIMARY KEY AUTOINCREMENT, 
+               name TEXT NOT NULL UNIQUE, 
+               unit TEXT NOT NULL)`
+    );
+
+    db.run(
+      `CREATE TABLE IF NOT EXISTS 
+       measurements(id INTEGER PRIMARY KEY AUTOINCREMENT, 
+       boxId INT NOT NULL, 
+       value NUM, 
+       sensorId INT NOT NULL, 
+       timestamp TEXT NOT NULL, 
+       UNIQUE(boxId, sensorId, timestamp))`
+    );
+
+    // SEED DATA
+    const sensors = [
+      {
         name: "Temperature",
         unit: "℃"
-    },
-               {
+      },
+      {
         name: "Humidity",
         unit: "%"
-    }];
-
-    const addUser = `INSERT OR IGNORE INTO users(boxId, name) VALUES (?, ?)`,
-    addSensor = `INSERT OR IGNORE INTO sensors(name, unit) VALUES(?, ?)`;
-    users.forEach(u => {
-        db.run(addUser, [u.boxId, u.name]);
-    })
-    sensors.forEach(s => {
-        db.run(addSensor, [s.name, s.unit]);
-    })
-
-    db.close();
-}
-
-export const add = async (boxId: number, sensor: number, value: number) => {
-    let db = connect(),
-    sql = "INSERT OR IGNORE INTO measurements(boxId, sensorId, value, timestamp) VALUES (?, ?, ?, ?)",
-    params = [boxId, sensor, value, Date.now()];
-
-    const result = await new Promise((resolve, reject) => {
-        db.run(sql, params, function(this: any, err: any){
-            if (err) {
-                reject(err)
-            }
-            resolve(this.changes);
-        });
-        
-    })
-    db.close();
-    return result;
-}
-
-export const all = async (boxId : number, sensor: number, values: number, limit: number) => {
-    let db = connect(),
-    sql = "SELECT timestamp as x, value as y FROM measurements WHERE boxId = ? AND sensorId = ? ORDER BY timestamp desc LIMIT ?",
-    params = [boxId, sensor, limit];
-    const result = await new Promise((resolve, reject) => {
-        db.all(sql, params, (err: any, rows: any[]) => {
-            if (err) {
-                reject(err);
-            }
-            const downSampledData  = LTOB(rows, values);
-            resolve(downSampledData);
-        });
+      },
+      {
+        name: "Pressure",
+        unit: "Pa"
+      },
+      {
+        name: "Light",
+        unit: "Lux"
+      },
+      {
+        name: "Distance",
+        unit: "cm"
+      },
+      {
+        name: "Sound",
+        unit: "dB"
+      }
+    ];
+    sensors.forEach(async s => {
+      await sensor.add(s.name, s.unit);
     });
-    db.close();
-    return result;
-}
 
-export const latest = async (boxId : number, sensor: number) => {
-    let db = connect(),
-    sql = "SELECT timestamp as x, value as y FROM measurements WHERE boxId = ? AND sensorId = ? ORDER BY timestamp desc LIMIT 1",
-    params = [boxId, sensor];
-    const result = await new Promise((resolve, reject) => {
-        db.all(sql, params, (err: any, rows: any[]) => {
-            if (err) {
-                reject(err);
-            }
-            resolve(rows[0]);
-        });
-    });
-    db.close();
-    return result;
-}
+    const adminHash = await security.hashPassword(security.secrets!.admin, 12);
+    await user.add("Stian", adminHash, true);
+  });
+};
 
-export const boxes = async () => {
-    let db = connect(),
-    sql = "SELECT * FROM users";
-    const result = await new Promise((resolve, reject) => {
-        db.all(sql, [], (err: any, rows: any[]) => {
-            if (err) {
-                reject(err);
-            }
-            resolve(rows);
-        });
-    });
-    db.close();
-    return result;
-}
+export const measurement = {
+  add: async (boxId: number, sensor: number, value: number) => {
+    const exists = await box.get(boxId);
+    if (!exists) {
+      return Promise.reject(`BOX ${boxId} NOT FOUND`);
+    }
 
-export const sensors = async () => {
-    let db = connect(),
-    sql = "SELECT * FROM sensors";
-    const result = await new Promise((resolve, reject) => {
-        db.all(sql, [], (err: any, rows: any[]) => {
-            if (err) {
-                reject(err);
-            }
-            resolve(rows);
-        });
-    });
-    db.close();
-    return result;
-}
+    const sql =
+        "INSERT OR IGNORE INTO measurements(boxId, sensorId, value, timestamp) VALUES (?, ?, ?, ?)",
+      params = [boxId, sensor, value, Date.now()];
+    return run(db, sql, params);
+  },
+  all: async (boxId: number, sensor: number, values: number, limit: number) => {
+    const sql =
+        "SELECT timestamp as x, value as y FROM measurements WHERE boxId = ? AND sensorId = ? ORDER BY timestamp desc LIMIT ?",
+      params = [boxId, sensor, limit];
+    const result = await all(db, sql, params);
+    return LTOB(result, values);
+  },
+  latest: async (boxId: number, sensor: number) => {
+    const sql =
+        "SELECT timestamp as x, value as y FROM measurements WHERE boxId = ? AND sensorId = ? ORDER BY timestamp desc LIMIT 1",
+      params = [boxId, sensor];
+    return get(db, sql, params);
+  }
+};
+
+export const box = {
+  all: async () => {
+    const sql = "SELECT * FROM boxes";
+    return all(db, sql);
+  },
+  allByUserId: async (userId: string) => {
+    const sql = "SELECT * FROM boxes WHERE userId = ?",
+      params = [userId];
+    return all(db, sql, params);
+  },
+  add: async (userId: number, description: string) => {
+    const sql =
+        "INSERT OR IGNORE INTO boxes(userId, description) VALUES (?, ?)",
+      params = [userId, description];
+    return run(db, sql, params);
+  },
+  get: async (boxId: number) => {
+    const sql = `SELECT * FROM boxes WHERE boxes.id = ?`;
+    return get(db, sql, [boxId]);
+  }
+};
+
+export const sensor = {
+  all: async () => {
+    const sql = "SELECT * FROM sensors";
+    return all(db, sql);
+  },
+  add: async (name: string, unit: string) => {
+    const sql = `INSERT OR IGNORE INTO sensors(name, unit) VALUES(?, ?)`,
+      params = [name, unit];
+    return run(db, sql, params);
+  },
+  get: async (sensorId: number) => {
+    const sql = `SELECT * FROM sensors WHERE id = ?`;
+    return get(db, sql, [sensorId]);
+  }
+};
+
+export const user = {
+  all: async () => {
+    const sql = "SELECT id, name FROM users";
+    return all(db, sql);
+  },
+  add: async (name: string, api_key: string, is_admin: boolean = false) => {
+    const sql = `INSERT OR IGNORE INTO users(name, api_key, is_admin) VALUES(?, ?, ?)`,
+      params = [name, api_key, is_admin];
+    return run(db, sql, params);
+  },
+  get: async (userId: number) => {
+    const sql = `SELECT users.id, users.name FROM users 
+                 INNER JOIN boxes 
+                 ON users.id = boxes.userId 
+                 WHERE users.id = ?`;
+    return get(db, sql, [userId]);
+  },
+  getFullUser: async (userId: number) => {
+    const sql = `SELECT * FROM users WHERE id = ?`;
+    return get(db, sql, [userId]);
+  },
+  update: async (userId: number, changes: any) => {
+    const existing = await user.getFullUser(userId),
+      update = { ...existing, ...changes };
+    const sql = `UPDATE users SET name = ?, api_key = ?, is_admin = ? WHERE id = ?`,
+      params = [update.name, update.api_key, update.is_admin, userId];
+    return run(db, sql, params);
+  }
+};
