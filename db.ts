@@ -1,5 +1,6 @@
 import { LTOB } from "downsample";
 const sqlite3 = require("sqlite3").verbose();
+import * as moment from "moment";
 import * as security from "./security";
 
 const DEBUG = true;
@@ -154,10 +155,19 @@ export const measurement = {
       params = [boxId, sensor, value, Date.now()];
     return run(db, sql, params);
   },
-  all: async (boxId: number, sensor: number, values: number, limit: number) => {
+  all: async (
+    boxId: number,
+    sensor: number,
+    values: number,
+    minutes: number
+  ) => {
+    const timestamp = moment()
+      .subtract(minutes, "minutes")
+      .valueOf();
+
     const sql =
-        "SELECT timestamp as x, value as y FROM measurements WHERE boxId = ? AND sensorId = ? ORDER BY timestamp desc LIMIT ?",
-      params = [boxId, sensor, limit];
+        "SELECT timestamp as x, value as y FROM measurements WHERE boxId = ? AND sensorId = ? AND timestamp > ? ORDER BY timestamp desc",
+      params = [boxId, sensor, timestamp];
     const result = await all(db, sql, params);
     return LTOB(result, values);
   },
@@ -171,7 +181,7 @@ export const measurement = {
 
 export const box = {
   all: async () => {
-    const sql = "SELECT * FROM boxes";
+    const sql = `select boxes.id, boxes.description, users.id as ownerId, users.name as ownerName from users left join boxes on users.id = boxes.userId`;
     return all(db, sql);
   },
   allByUserId: async (userId: string) => {

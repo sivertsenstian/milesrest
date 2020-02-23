@@ -5,7 +5,8 @@
   "main": "server.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "rm db.sqlite || true && ts-node server.ts",
+    "start": "ts-node server.ts",
+    "clean-start": "rm db.sqlite || true && ts-node server.ts",
     "dist": "parcel build server.ts --target node",
     "zip": "zip -r dist.zip dist package.json package-lock.json public",
     "publish": "scp dist.zip pi@192.168.86.82:~/rest/",
@@ -20,6 +21,7 @@
     "downsample": "^1.0.3",
     "express": "^4.17.1",
     "guid-typescript": "^1.0.9",
+    "moment": "^2.24.0",
     "sqlite3": "^4.1.1"
   },
   "devDependencies": {

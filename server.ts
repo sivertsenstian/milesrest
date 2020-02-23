@@ -28,17 +28,17 @@ const router = express.Router(); // get an instance of the express Router
 router.get("/", async (req, res) => {
   res.json({
     "[GET] /health": "health check / ping",
-    "[GET] /sensors": "lists avaiable sensors",
+    "[GET] /sensors": "lists sensors",
     "[GET] /users": "lists users",
     "[GET] /users/:userId": "details about given user",
     "[GET] /users/:userId/boxes": "lists boxes belonging to given user",
     "[POST] /users/:userId/boxes":
       "{description: string;} - add box for user with given description",
-    "[GET] /boxes": "lists available boxes",
+    "[GET] /boxes": "lists boxes",
     "[GET] /boxes/:boxId": "details about given box",
     "[GET] /boxes/:boxId/sensors": "lists available sensors for given box",
-    "[GET] /boxes/:boxId/sensors/:sensor?values=x&limit=y":
-      "returns a decimated list of measurements for sensor of given box, where x is number of returned values from the last y datapoints",
+    "[GET] /boxes/:boxId/sensors/:sensor?values=x&minutes=y":
+      "returns a decimated list of measurements for sensor of given box, where x is number of returned values from the last y minutes from now",
     "[GET] /boxes/:boxId/sensors/:sensor/latest":
       "returns most recent datapoint for sensor of given box",
     "[GET] /boxes/:boxId/sensors/:sensor/add/:measurement":
@@ -89,12 +89,12 @@ router.get("/boxes/:boxId/sensors", async (req, res) => {
 
 router.get("/boxes/:boxId/sensors/:sensor", async (req, res) => {
   const { boxId, sensor } = req.params,
-    { values, limit } = req.query,
+    { values, minutes } = req.query,
     data = await db.measurement.all(
       Number(boxId),
       Number(sensor),
       Number(values ?? 100),
-      Number(limit ?? 1000)
+      Number(minutes ?? 43830) // a month in minutes
     );
 
   res.json({
