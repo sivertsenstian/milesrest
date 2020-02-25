@@ -9,7 +9,7 @@
     "clean-start": "rm db.sqlite || true && ts-node server.ts",
     "dist": "parcel build server.ts --target node",
     "zip": "zip -r dist.zip dist package.json package-lock.json public",
-    "publish": "scp dist.zip pi@192.168.86.82:~/rest/",
+    "publish": "scp dist.zip stian@192.168.86.245:~/loadout/",
     "release": "npm run dist && npm run zip && npm run publish"
   },
   "author": "",

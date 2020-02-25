@@ -198,6 +198,11 @@ export const box = {
   get: async (boxId: number) => {
     const sql = `SELECT * FROM boxes WHERE boxes.id = ?`;
     return get(db, sql, [boxId]);
+  },
+  remove: async (boxId: number) => {
+    const sql = `DELETE from boxes WHERE id = ?`,
+      params = [boxId];
+    return run(db, sql, params);
   }
 };
 
@@ -214,6 +219,11 @@ export const sensor = {
   get: async (sensorId: number) => {
     const sql = `SELECT * FROM sensors WHERE id = ?`;
     return get(db, sql, [sensorId]);
+  },
+  remove: async (sensorId: number) => {
+    const sql = `DELETE from sensors WHERE id = ?`,
+      params = [sensorId];
+    return run(db, sql, params);
   }
 };
 
@@ -243,6 +253,11 @@ export const user = {
       update = { ...existing, ...changes };
     const sql = `UPDATE users SET name = ?, api_key = ?, is_admin = ? WHERE id = ?`,
       params = [update.name, update.api_key, update.is_admin, userId];
+    return run(db, sql, params);
+  },
+  remove: async (userId: number) => {
+    const sql = `DELETE from users WHERE id = ?`,
+      params = [userId];
     return run(db, sql, params);
   }
 };

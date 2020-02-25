@@ -43,12 +43,15 @@ router.get("/", async (req, res) => {
       "returns most recent datapoint for sensor of given box",
     "[GET] /boxes/:boxId/sensors/:sensor/add/:measurement":
       "Adds measurement to the given box, for given sensor",
-    "[POST] /admin/:adminId/user":
+    "[POST] /admin/:adminId/users":
       "{name: string; is_admin: boolean} - add user",
     "[POST] /admin/:adminId/apikey/:userId":
       "{} - generate new api key for given user",
-    "[POST] /admin/:adminId/sensor":
-      "{name: string; unit: string;} - add sensor"
+    "[POST] /admin/:adminId/sensors":
+      "{name: string; unit: string;} - add sensor",
+    "[DELETE] /admin/:adminId/sensors": "{id: number;} - remove sensor",
+    "[DELETE] /admin/:adminId/users": "{id: number;} - remove user",
+    "[DELETE] /admin/:adminId/boxes": "{id: number;} - remove box"
   });
 });
 
@@ -190,7 +193,7 @@ router.post("/users/:userId/boxes", async (req, res) => {
 });
 
 // ADMIN
-router.post("/admin/:adminId/user", async (req, res) => {
+router.post("/admin/:adminId/users", async (req, res) => {
   const { name, is_admin } = req.body,
     { adminId } = req.params,
     authorization = req.headers?.authorization ?? "";
@@ -243,7 +246,7 @@ router.post("/admin/:adminId/apikey/:userId", async (req, res) => {
   }
 });
 
-router.post("/admin/:adminId/sensor", async (req, res) => {
+router.post("/admin/:adminId/sensors", async (req, res) => {
   const { name, unit } = req.body,
     { adminId } = req.params,
     authorization = req.headers?.authorization ?? "";
@@ -258,6 +261,72 @@ router.post("/admin/:adminId/sensor", async (req, res) => {
       }
     }
     const data = await db.sensor.add(name, unit);
+    res.json(data);
+  } catch (e) {
+    res.statusCode = 401;
+    res.sendFile(__dirname + "/public/unauthorized.html");
+  }
+});
+
+router.delete("/admin/:adminId/sensors", async (req, res) => {
+  const { id } = req.body,
+    { adminId } = req.params,
+    authorization = req.headers?.authorization ?? "";
+
+  try {
+    if (AUTHORIZE) {
+      const user = await db.user.getFullUser(Number(adminId)),
+        is_authorized = await security.compare(authorization, user.api_key);
+
+      if (!user.is_admin || !is_authorized) {
+        throw new Error("UnauthorizedError");
+      }
+    }
+    const data = await db.sensor.remove(id);
+    res.json(data);
+  } catch (e) {
+    res.statusCode = 401;
+    res.sendFile(__dirname + "/public/unauthorized.html");
+  }
+});
+
+router.delete("/admin/:adminId/boxes", async (req, res) => {
+  const { id } = req.body,
+    { adminId } = req.params,
+    authorization = req.headers?.authorization ?? "";
+
+  try {
+    if (AUTHORIZE) {
+      const user = await db.user.getFullUser(Number(adminId)),
+        is_authorized = await security.compare(authorization, user.api_key);
+
+      if (!user.is_admin || !is_authorized) {
+        throw new Error("UnauthorizedError");
+      }
+    }
+    const data = await db.box.remove(id);
+    res.json(data);
+  } catch (e) {
+    res.statusCode = 401;
+    res.sendFile(__dirname + "/public/unauthorized.html");
+  }
+});
+
+router.delete("/admin/:adminId/users", async (req, res) => {
+  const { id } = req.body,
+    { adminId } = req.params,
+    authorization = req.headers?.authorization ?? "";
+
+  try {
+    if (AUTHORIZE) {
+      const user = await db.user.getFullUser(Number(adminId)),
+        is_authorized = await security.compare(authorization, user.api_key);
+
+      if (!user.is_admin || !is_authorized) {
+        throw new Error("UnauthorizedError");
+      }
+    }
+    const data = await db.user.remove(id);
     res.json(data);
   } catch (e) {
     res.statusCode = 401;
